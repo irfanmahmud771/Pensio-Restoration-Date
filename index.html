@@ -42,6 +42,14 @@
         .table-container::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+        /* Flashing animation */
+        @keyframes flash {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+        .flashing-text {
+            animation: flash 1.5s infinite;
+        }
     </style>
 </head>
 <body class="bg-gray-100 py-10">
@@ -155,9 +163,6 @@
             }
 
             const dobDate = new Date(dobValue);
-            // --- ADJUSTMENT: Add one day to Date of Birth for calculation ---
-            dobDate.setDate(dobDate.getDate() + 1);
-
             const sosDate = new Date(sosValue);
 
             if (sosDate <= dobDate) {
@@ -165,9 +170,23 @@
                 return;
             }
 
-            const ageInMs = sosDate.getTime() - dobDate.getTime();
-            const ageInYears = ageInMs / (1000 * 60 * 60 * 24 * 365.25);
-            const ageNextBirthday = Math.floor(ageInYears) + 1;
+            // --- Revised "Age on Next Birthday" Calculation as per new Excel ---
+            let ageYears = sosDate.getFullYear() - dobDate.getFullYear();
+            const monthDiff = sosDate.getMonth() - dobDate.getMonth();
+            const dayDiff = sosDate.getDate() - dobDate.getDate();
+
+            // Check if the birthday has occurred in the retirement year
+            if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+                ageYears--;
+            }
+
+            let ageNextBirthday;
+            // Check if retirement is exactly on the birthday
+            if (monthDiff === 0 && dayDiff === 0) {
+                ageNextBirthday = ageYears;
+            } else {
+                ageNextBirthday = ageYears + 1;
+            }
 
             const record = pensionData.find(d => d.age === ageNextBirthday);
 
@@ -204,31 +223,31 @@
             const year = restorationDate.getFullYear();
             const formattedRestorationDate = `${day} ${monthName}, ${year}`;
 
-            // --- Calculate Age at Restoration (Years, Months, Days) ---
-            let ageYears = restorationDate.getFullYear() - dobDate.getFullYear();
-            let ageMonths = restorationDate.getMonth() - dobDate.getMonth();
-            let ageDays = restorationDate.getDate() - dobDate.getDate();
+            // --- "Age at Restoration" Calculation ---
+            let tempDob = new Date(dobValue);
+            let ageYearsAtRestoration = restorationDate.getFullYear() - tempDob.getFullYear();
+            let ageMonthsAtRestoration = restorationDate.getMonth() - tempDob.getMonth();
+            let ageDaysAtRestoration = restorationDate.getDate() - tempDob.getDate();
 
-            if (ageDays < 0) {
-                ageMonths--;
+             if (ageDaysAtRestoration < 0) {
+                ageMonthsAtRestoration--;
                 const daysInPrevMonth = new Date(restorationDate.getFullYear(), restorationDate.getMonth(), 0).getDate();
-                ageDays += daysInPrevMonth;
+                ageDaysAtRestoration += daysInPrevMonth;
+            }
+             if (ageMonthsAtRestoration < 0) {
+                ageYearsAtRestoration--;
+                ageMonthsAtRestoration += 12;
             }
 
-            if (ageMonths < 0) {
-                ageYears--;
-                ageMonths += 12;
-            }
-            
             // --- Format Age at Restoration with new rules ---
             let ageParts = [];
-            ageParts.push(`${ageYears} Years`);
+            ageParts.push(`${ageYearsAtRestoration} Years`);
 
-            if (ageMonths > 0) {
-                ageParts.push(ageMonths === 1 ? '1 Month' : `${ageMonths} Months`);
+            if (ageMonthsAtRestoration > 0) {
+                ageParts.push(ageMonthsAtRestoration === 1 ? '1 Month' : `${ageMonthsAtRestoration} Months`);
             }
-            if (ageDays > 0) {
-                ageParts.push(ageDays === 1 ? '1 Day' : `${ageDays} Days`);
+             if (ageDaysAtRestoration > 0) {
+                ageParts.push(ageDaysAtRestoration === 1 ? '1 Day' : `${ageDaysAtRestoration} Days`);
             }
             const formattedAgeAtRestoration = ageParts.join(' ');
 
@@ -236,10 +255,10 @@
             // --- Conditional Formatting for Restoration Date ---
             const today = new Date();
             today.setHours(0, 0, 0, 0); 
-            restorationDateResultSpan.classList.remove('text-green-600', 'text-red-600', 'font-bold');
+            restorationDateResultSpan.classList.remove('text-green-600', 'text-red-600', 'font-bold', 'flashing-text');
             
             if (restorationDate <= today) {
-                restorationDateResultSpan.classList.add('text-green-600', 'font-bold');
+                restorationDateResultSpan.classList.add('text-green-600', 'font-bold', 'flashing-text');
             } else {
                 restorationDateResultSpan.classList.add('text-red-600', 'font-bold');
             }
