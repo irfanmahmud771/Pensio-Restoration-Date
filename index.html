@@ -95,6 +95,43 @@
             <div id="message" class="mt-6 text-center text-red-500 font-medium"></div>
         </div>
 
+
+        <!-- Visit Counter Section -->
+        <div class="card w-full max-w-4xl mx-auto p-6 sm:p-8 mt-10">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Total Visit Counter</h2>
+                    <p class="text-gray-500 mt-1">Counts page visits locally and can save the total visit data to a GitHub JSON file.</p>
+                </div>
+                <div class="text-center bg-indigo-50 border border-indigo-100 rounded-xl px-6 py-4">
+                    <p class="text-sm font-medium text-indigo-700 uppercase tracking-wide">Total Visits</p>
+                    <p id="totalVisitCount" class="text-4xl font-bold text-indigo-600">0</p>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 border rounded-lg p-4 space-y-3">
+                <h3 class="font-semibold text-gray-800">GitHub Visit Data Storage</h3>
+                <p class="text-xs text-gray-500">Add repository details and a fine-grained GitHub token with Contents read/write access. The token is saved only in this browser.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input id="visitGithubOwnerInput" type="text" placeholder="GitHub Owner" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    <input id="visitGithubRepoInput" type="text" placeholder="Repository name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    <input id="visitGithubBranchInput" type="text" placeholder="Branch (default: main)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    <input id="visitGithubPathInput" type="text" placeholder="File path (default: total-visits.json)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    <input id="visitGithubTokenInput" type="password" placeholder="GitHub Token" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:col-span-2">
+                </div>
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input id="visitAutoSyncToggle" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                        Save each visit to GitHub
+                    </label>
+                    <div class="flex flex-wrap gap-2">
+                        <button id="saveVisitGithubConfigBtn" class="btn-primary text-sm font-semibold py-2 px-4 rounded-lg">Save GitHub Config</button>
+                        <button id="syncVisitNowBtn" class="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-colors">Sync Visit Data Now</button>
+                    </div>
+                </div>
+                <p id="visitGithubSyncStatus" class="text-xs text-gray-500"></p>
+            </div>
+        </div>
         <!-- Commutation Table Section -->
         <div class="card w-full max-w-4xl mx-auto p-6 sm:p-8 mt-10">
             <h2 class="text-2xl font-bold text-gray-800 text-center mb-6">Commutation Table for Pension</h2>
@@ -194,6 +231,172 @@
         const restorationDateResultSpan = document.getElementById('restorationDateResult');
         const ageAtRestorationResultSpan = document.getElementById('ageAtRestorationResult');
         const tableBody = document.getElementById('commutationTableBody');
+        const totalVisitCountSpan = document.getElementById('totalVisitCount');
+        const visitGithubOwnerInput = document.getElementById('visitGithubOwnerInput');
+        const visitGithubRepoInput = document.getElementById('visitGithubRepoInput');
+        const visitGithubBranchInput = document.getElementById('visitGithubBranchInput');
+        const visitGithubPathInput = document.getElementById('visitGithubPathInput');
+        const visitGithubTokenInput = document.getElementById('visitGithubTokenInput');
+        const visitAutoSyncToggle = document.getElementById('visitAutoSyncToggle');
+        const saveVisitGithubConfigBtn = document.getElementById('saveVisitGithubConfigBtn');
+        const syncVisitNowBtn = document.getElementById('syncVisitNowBtn');
+        const visitGithubSyncStatus = document.getElementById('visitGithubSyncStatus');
+        const totalVisitStorageKey = 'pensionTotalVisits';
+        const visitGithubConfigKey = 'pensionVisitGithubConfig';
+        let totalVisits = 0;
+        let visitGithubConfig = {
+            owner: '',
+            repo: '',
+            branch: 'main',
+            path: 'total-visits.json',
+            token: '',
+            autoSync: false
+        };
+
+        function toBase64(text) {
+            return btoa(unescape(encodeURIComponent(text)));
+        }
+
+        function fromBase64(text) {
+            return decodeURIComponent(escape(atob(text.replace(/\n/g, ''))));
+        }
+
+        function saveVisitGithubConfig() {
+            visitGithubConfig.owner = visitGithubOwnerInput.value.trim();
+            visitGithubConfig.repo = visitGithubRepoInput.value.trim();
+            visitGithubConfig.branch = (visitGithubBranchInput.value || 'main').trim();
+            visitGithubConfig.path = (visitGithubPathInput.value || 'total-visits.json').trim();
+            visitGithubConfig.token = visitGithubTokenInput.value.trim();
+            visitGithubConfig.autoSync = visitAutoSyncToggle.checked;
+            localStorage.setItem(visitGithubConfigKey, JSON.stringify(visitGithubConfig));
+        }
+
+        function loadVisitGithubConfig() {
+            const storedConfig = localStorage.getItem(visitGithubConfigKey);
+            if (!storedConfig) {
+                return;
+            }
+
+            const parsedConfig = JSON.parse(storedConfig);
+            visitGithubConfig = {
+                owner: parsedConfig.owner || '',
+                repo: parsedConfig.repo || '',
+                branch: parsedConfig.branch || 'main',
+                path: parsedConfig.path || 'total-visits.json',
+                token: parsedConfig.token || '',
+                autoSync: Boolean(parsedConfig.autoSync)
+            };
+
+            visitGithubOwnerInput.value = visitGithubConfig.owner;
+            visitGithubRepoInput.value = visitGithubConfig.repo;
+            visitGithubBranchInput.value = visitGithubConfig.branch;
+            visitGithubPathInput.value = visitGithubConfig.path;
+            visitGithubTokenInput.value = visitGithubConfig.token;
+            visitAutoSyncToggle.checked = visitGithubConfig.autoSync;
+        }
+
+        function isVisitGithubConfigValid() {
+            return Boolean(visitGithubConfig.owner && visitGithubConfig.repo && visitGithubConfig.branch && visitGithubConfig.path && visitGithubConfig.token);
+        }
+
+        function updateVisitCounterDisplay() {
+            totalVisitCountSpan.textContent = totalVisits.toLocaleString();
+        }
+
+        function saveLocalVisitCount() {
+            localStorage.setItem(totalVisitStorageKey, String(totalVisits));
+            updateVisitCounterDisplay();
+        }
+
+        async function syncVisitDataToGitHub({ incrementRemote = false } = {}) {
+            saveVisitGithubConfig();
+
+            if (!isVisitGithubConfigValid()) {
+                visitGithubSyncStatus.textContent = 'GitHub config incomplete. Add owner, repo, branch, path and token.';
+                return;
+            }
+
+            visitGithubSyncStatus.textContent = 'Saving visit data to GitHub...';
+            const apiUrl = `https://api.github.com/repos/${visitGithubConfig.owner}/${visitGithubConfig.repo}/contents/${visitGithubConfig.path}`;
+            const visitTime = new Date().toISOString();
+            let remoteVisitData = {
+                totalVisits: 0,
+                lastVisitAt: null,
+                recentVisits: []
+            };
+            let sha;
+
+            try {
+                const readResponse = await fetch(`${apiUrl}?ref=${encodeURIComponent(visitGithubConfig.branch)}`, {
+                    headers: {
+                        Authorization: `Bearer ${visitGithubConfig.token}`,
+                        Accept: 'application/vnd.github+json'
+                    }
+                });
+
+                if (readResponse.ok) {
+                    const currentFile = await readResponse.json();
+                    sha = currentFile.sha;
+                    remoteVisitData = JSON.parse(fromBase64(currentFile.content));
+                } else if (readResponse.status !== 404) {
+                    throw new Error('Unable to read existing GitHub visit file.');
+                }
+
+                const remoteTotal = Number(remoteVisitData.totalVisits) || 0;
+                const nextTotalVisits = incrementRemote ? Math.max(remoteTotal + 1, totalVisits) : Math.max(remoteTotal, totalVisits);
+                totalVisits = nextTotalVisits;
+                saveLocalVisitCount();
+
+                const visitData = {
+                    totalVisits: nextTotalVisits,
+                    lastVisitAt: visitTime,
+                    recentVisits: [
+                        {
+                            visitedAt: visitTime,
+                            userAgent: navigator.userAgent
+                        },
+                        ...(Array.isArray(remoteVisitData.recentVisits) ? remoteVisitData.recentVisits : [])
+                    ].slice(0, 25)
+                };
+
+                const writePayload = {
+                    message: `Update total visit counter - ${visitTime}`,
+                    content: toBase64(JSON.stringify(visitData, null, 2)),
+                    branch: visitGithubConfig.branch
+                };
+                if (sha) {
+                    writePayload.sha = sha;
+                }
+
+                const writeResponse = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        Authorization: `Bearer ${visitGithubConfig.token}`,
+                        Accept: 'application/vnd.github+json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(writePayload)
+                });
+
+                if (!writeResponse.ok) {
+                    throw new Error('GitHub visit update failed. Please verify token permissions and repository details.');
+                }
+
+                visitGithubSyncStatus.textContent = `Visit data saved to GitHub at ${new Date().toUTCString()}.`;
+            } catch (error) {
+                visitGithubSyncStatus.textContent = error.message;
+            }
+        }
+
+        async function countTotalVisit() {
+            const storedVisitCount = Number(localStorage.getItem(totalVisitStorageKey)) || 0;
+            totalVisits = storedVisitCount + 1;
+            saveLocalVisitCount();
+
+            if (visitGithubConfig.autoSync) {
+                await syncVisitDataToGitHub({ incrementRemote: true });
+            }
+        }
 
         function populateTable() {
             tableBody.innerHTML = ''; // Clear existing rows
@@ -337,7 +540,20 @@
             resultsDiv.classList.remove('hidden');
         });
 
-        document.addEventListener('DOMContentLoaded', populateTable);
+        saveVisitGithubConfigBtn.addEventListener('click', () => {
+            saveVisitGithubConfig();
+            visitGithubSyncStatus.textContent = 'GitHub visit configuration saved locally.';
+        });
+
+        syncVisitNowBtn.addEventListener('click', async () => {
+            await syncVisitDataToGitHub();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadVisitGithubConfig();
+            countTotalVisit();
+            populateTable();
+        });
     </script>
 </body>
 </html>
