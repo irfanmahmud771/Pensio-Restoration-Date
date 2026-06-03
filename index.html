@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pension Restoration Date Calculator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -91,8 +92,13 @@
                 </div>
             </div>
 
+            <div class="mt-6 text-center text-sm text-gray-500">
+                Total Visits: <span id="totalVisits" class="font-semibold text-indigo-600">Loading...</span>
+            </div>
+
             <!-- Error/Message Section -->
             <div id="message" class="mt-6 text-center text-red-500 font-medium"></div>
+            <div id="saveMessage" class="mt-2 text-center text-sm text-gray-500"></div>
         </div>
 
         <!-- Commutation Table Section -->
@@ -118,6 +124,20 @@
 
 
     <script>
+        // Supabase project settings.
+        // Create the required tables and policies by running supabase-schema.sql in Supabase.
+        const SUPABASE_URL = 'https://loirevkvnyewefzxzpbn.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_rcCa1GNbYhx1yRmozV648g_mvz0TUr5';
+        const CALCULATIONS_TABLE = 'pension_calculations';
+        const VISITS_TABLE = 'app_visits';
+        const VISIT_COUNTER_ID = 'pension-restoration-date';
+        const isSupabaseConfigured = SUPABASE_URL.includes('supabase.co')
+            && !SUPABASE_URL.includes('YOUR_PROJECT_REF')
+            && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_ANON_KEY');
+        const supabaseClient = isSupabaseConfigured && window.supabase
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+            : null;
+
         // Data derived from the provided CSV file, now extended
         const pensionData = [
             { age: 20, val_2001: 40.5043, val_1986: 50.6304, val_1966: 24.265 },
@@ -194,6 +214,81 @@
         const restorationDateResultSpan = document.getElementById('restorationDateResult');
         const ageAtRestorationResultSpan = document.getElementById('ageAtRestorationResult');
         const tableBody = document.getElementById('commutationTableBody');
+        const totalVisitsSpan = document.getElementById('totalVisits');
+        const saveMessageDiv = document.getElementById('saveMessage');
+
+        function getSupabaseStatusMessage() {
+            if (!isSupabaseConfigured) {
+                return 'Supabase is not configured yet. Add your project URL and publishable key in index.html.';
+            }
+
+            if (!supabaseClient) {
+                return 'Supabase could not be loaded. Check your internet connection and CDN access.';
+            }
+
+            return '';
+        }
+
+        function showSaveMessage(message, isError = false) {
+            saveMessageDiv.textContent = message;
+            saveMessageDiv.className = `mt-2 text-center text-sm ${isError ? 'text-red-500' : 'text-gray-500'}`;
+        }
+
+        async function updateVisitCounter() {
+            const statusMessage = getSupabaseStatusMessage();
+            if (statusMessage) {
+                totalVisitsSpan.textContent = 'Not connected';
+                showSaveMessage(statusMessage);
+                return;
+            }
+
+            try {
+                const { data: nextTotalVisits, error } = await supabaseClient
+                    .rpc('increment_app_visit', { counter_id: VISIT_COUNTER_ID });
+
+                if (error) {
+                    throw error;
+                }
+
+                totalVisitsSpan.textContent = Number(nextTotalVisits).toLocaleString();
+            } catch (error) {
+                totalVisitsSpan.textContent = 'Unavailable';
+                showSaveMessage(`Unable to update total visits: ${error.message}`, true);
+            }
+        }
+
+        async function saveCalculation(calculation) {
+            const statusMessage = getSupabaseStatusMessage();
+            if (statusMessage) {
+                showSaveMessage(statusMessage);
+                return;
+            }
+
+            showSaveMessage('Saving calculation...');
+
+            try {
+                const { error } = await supabaseClient
+                    .from(CALCULATIONS_TABLE)
+                    .insert({
+                        date_of_birth: calculation.dateOfBirth,
+                        retirement_date: calculation.retirementDate,
+                        age_next_birthday: calculation.ageNextBirthday,
+                        purchase_factor: calculation.purchaseFactor,
+                        effective_policy_date: calculation.effectivePolicyDate,
+                        restoration_date: calculation.restorationDate,
+                        age_at_restoration: calculation.ageAtRestoration,
+                        created_at: new Date().toISOString(),
+                    });
+
+                if (error) {
+                    throw error;
+                }
+
+                showSaveMessage('Calculation saved in Supabase.');
+            } catch (error) {
+                showSaveMessage(`Unable to save calculation: ${error.message}`, true);
+            }
+        }
 
         function populateTable() {
             tableBody.innerHTML = ''; // Clear existing rows
@@ -229,7 +324,7 @@
                 messageDiv.textContent = 'Retirement Date must be after the Date of Birth.';
                 return;
             }
-            
+
             // --- ADJUSTMENT: Add 1 day to SOS for Age on Next Birthday calculation ---
             const adjustedSosDate = new Date(sosDate);
             adjustedSosDate.setDate(adjustedSosDate.getDate() + 1);
@@ -260,7 +355,7 @@
                 messageDiv.textContent = `Calculation is only available for 'Age on Next Birthday' between ${minAge} and ${maxAge}. Your calculated age is ${ageNextBirthday}.`;
                 return;
             }
-            
+
             let purchaseValue;
             let effectivePolicyDateStr;
             const date2001 = new Date('2001-12-01');
@@ -276,10 +371,10 @@
                 purchaseValue = record.val_1966;
                 effectivePolicyDateStr = '01 Jul, 1966';
             }
-            
+
             const yearsToAdd = Math.round(purchaseValue);
             // Restoration Date uses original SOS Date
-            const restorationDate = new Date(sosDate); 
+            const restorationDate = new Date(sosDate);
             restorationDate.setFullYear(restorationDate.getFullYear() + yearsToAdd);
 
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -287,6 +382,7 @@
             const monthName = months[restorationDate.getMonth()];
             const year = restorationDate.getFullYear();
             const formattedRestorationDate = `${day} ${monthName}, ${year}`;
+            const restorationDateIso = `${year}-${String(restorationDate.getMonth() + 1).padStart(2, '0')}-${day}`;
 
             // --- "Age at Restoration" Calculation ---
             let tempDob = new Date(dobValue);
@@ -319,9 +415,9 @@
 
             // --- Conditional Formatting for Restoration Date ---
             const today = new Date();
-            today.setHours(0, 0, 0, 0); 
+            today.setHours(0, 0, 0, 0);
             restorationDateResultSpan.classList.remove('text-green-600', 'text-red-600', 'font-bold', 'flashing-text');
-            
+
             if (restorationDate <= today) {
                 restorationDateResultSpan.classList.add('text-green-600', 'font-bold', 'flashing-text');
             } else {
@@ -335,9 +431,22 @@
             restorationDateResultSpan.textContent = formattedRestorationDate;
             ageAtRestorationResultSpan.textContent = formattedAgeAtRestoration;
             resultsDiv.classList.remove('hidden');
+
+            saveCalculation({
+                dateOfBirth: dobValue,
+                retirementDate: sosValue,
+                ageNextBirthday,
+                purchaseFactor: purchaseValue,
+                effectivePolicyDate: effectivePolicyDateStr,
+                restorationDate: restorationDateIso,
+                ageAtRestoration: formattedAgeAtRestoration,
+            });
         });
 
-        document.addEventListener('DOMContentLoaded', populateTable);
+        document.addEventListener('DOMContentLoaded', () => {
+            populateTable();
+            updateVisitCounter();
+        });
     </script>
 </body>
 </html>
