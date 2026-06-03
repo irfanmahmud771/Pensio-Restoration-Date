@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pension Restoration Date Calculator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -91,8 +92,59 @@
                 </div>
             </div>
 
+            <div class="mt-6 text-center text-sm text-gray-500">
+                Total Visits: <span id="totalVisits" class="font-semibold text-indigo-600">Loading...</span>
+            </div>
+
             <!-- Error/Message Section -->
             <div id="message" class="mt-6 text-center text-red-500 font-medium"></div>
+            <div id="saveMessage" class="mt-2 text-center text-sm text-gray-500"></div>
+
+            <div class="mt-4 text-center">
+                <button id="showLogBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                    Show Log
+                </button>
+            </div>
+        </div>
+
+        <!-- Supabase Log Section -->
+        <div id="logPanel" class="card w-full max-w-6xl mx-auto p-6 sm:p-8 mt-10 hidden">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Saved Calculation Log</h2>
+                    <p class="text-sm text-gray-500 mt-1">Edit a saved calculation and click Save to update it in Supabase.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="refreshLogBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                        Refresh
+                    </button>
+                    <button id="hideLogBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors">
+                        Hide
+                    </button>
+                </div>
+            </div>
+            <div id="logMessage" class="mb-4 text-sm text-gray-500"></div>
+            <div class="overflow-x-auto rounded-lg border">
+                <table class="w-full min-w-[900px] text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-3 py-3">ID</th>
+                            <th scope="col" class="px-3 py-3">Date of Birth</th>
+                            <th scope="col" class="px-3 py-3">Retirement Date</th>
+                            <th scope="col" class="px-3 py-3">Age Next Birthday</th>
+                            <th scope="col" class="px-3 py-3">Purchase Factor</th>
+                            <th scope="col" class="px-3 py-3">Policy Date</th>
+                            <th scope="col" class="px-3 py-3">Restoration Date</th>
+                            <th scope="col" class="px-3 py-3">Age at Restoration</th>
+                            <th scope="col" class="px-3 py-3">Created</th>
+                            <th scope="col" class="px-3 py-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logTableBody" class="divide-y divide-gray-200 bg-white">
+                        <!-- Saved calculation rows will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Commutation Table Section -->
@@ -118,6 +170,21 @@
 
 
     <script>
+        // Supabase project settings.
+        // Create the required tables and policies by running supabase-schema.sql in Supabase.
+        const SUPABASE_URL = 'https://loirevkvnyewefzxzpbn.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_rcCa1GNbYhx1yRmozV648g_mvz0TUr5';
+        const CALCULATIONS_TABLE = 'pension_calculations';
+        const VISITS_TABLE = 'app_visits';
+        const VISIT_COUNTER_ID = 'pension-restoration-date';
+        const LOG_PASSWORD = 'Smile@786';
+        const isSupabaseConfigured = SUPABASE_URL.includes('supabase.co')
+            && !SUPABASE_URL.includes('YOUR_PROJECT_REF')
+            && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_ANON_KEY');
+        const supabaseClient = isSupabaseConfigured && window.supabase
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+            : null;
+
         // Data derived from the provided CSV file, now extended
         const pensionData = [
             { age: 20, val_2001: 40.5043, val_1986: 50.6304, val_1966: 24.265 },
@@ -194,6 +261,245 @@
         const restorationDateResultSpan = document.getElementById('restorationDateResult');
         const ageAtRestorationResultSpan = document.getElementById('ageAtRestorationResult');
         const tableBody = document.getElementById('commutationTableBody');
+        const totalVisitsSpan = document.getElementById('totalVisits');
+        const saveMessageDiv = document.getElementById('saveMessage');
+        const showLogBtn = document.getElementById('showLogBtn');
+        const logPanel = document.getElementById('logPanel');
+        const refreshLogBtn = document.getElementById('refreshLogBtn');
+        const hideLogBtn = document.getElementById('hideLogBtn');
+        const logMessageDiv = document.getElementById('logMessage');
+        const logTableBody = document.getElementById('logTableBody');
+
+        function getSupabaseStatusMessage() {
+            if (!isSupabaseConfigured) {
+                return 'Supabase is not configured yet. Add your project URL and publishable key in index.html.';
+            }
+
+            if (!supabaseClient) {
+                return 'Supabase could not be loaded. Check your internet connection and CDN access.';
+            }
+
+            return '';
+        }
+
+        function showSaveMessage(message, isError = false) {
+            saveMessageDiv.textContent = message;
+            saveMessageDiv.className = `mt-2 text-center text-sm ${isError ? 'text-red-500' : 'text-gray-500'}`;
+        }
+
+        async function updateVisitCounter() {
+            const statusMessage = getSupabaseStatusMessage();
+            if (statusMessage) {
+                totalVisitsSpan.textContent = 'Not connected';
+                showSaveMessage(statusMessage);
+                return;
+            }
+
+            try {
+                const { data: nextTotalVisits, error } = await supabaseClient
+                    .rpc('increment_app_visit', { counter_id: VISIT_COUNTER_ID });
+
+                if (error) {
+                    throw error;
+                }
+
+                totalVisitsSpan.textContent = Number(nextTotalVisits).toLocaleString();
+            } catch (error) {
+                totalVisitsSpan.textContent = 'Unavailable';
+                showSaveMessage(`Unable to update total visits: ${error.message}`, true);
+            }
+        }
+
+        async function saveCalculation(calculation) {
+            const statusMessage = getSupabaseStatusMessage();
+            if (statusMessage) {
+                showSaveMessage(statusMessage);
+                return;
+            }
+
+            showSaveMessage('Saving calculation...');
+
+            try {
+                const { error } = await supabaseClient
+                    .from(CALCULATIONS_TABLE)
+                    .insert({
+                        date_of_birth: calculation.dateOfBirth,
+                        retirement_date: calculation.retirementDate,
+                        age_next_birthday: calculation.ageNextBirthday,
+                        purchase_factor: calculation.purchaseFactor,
+                        effective_policy_date: calculation.effectivePolicyDate,
+                        restoration_date: calculation.restorationDate,
+                        age_at_restoration: calculation.ageAtRestoration,
+                        created_at: new Date().toISOString(),
+                    });
+
+                if (error) {
+                    throw error;
+                }
+
+                showSaveMessage('');
+            } catch (error) {
+                showSaveMessage(`Unable to save calculation: ${error.message}`, true);
+            }
+        }
+
+        function showLogMessage(message, isError = false) {
+            logMessageDiv.textContent = message;
+            logMessageDiv.className = `mb-4 text-sm ${isError ? 'text-red-500' : 'text-gray-500'}`;
+        }
+
+        function createTextCell(text) {
+            const cell = document.createElement('td');
+            cell.className = 'px-3 py-3 text-gray-700 align-top';
+            cell.textContent = text ?? '';
+            return cell;
+        }
+
+        function createEditableCell(field, value, type = 'text') {
+            const cell = document.createElement('td');
+            cell.className = 'px-3 py-3 align-top';
+
+            const input = document.createElement('input');
+            input.dataset.field = field;
+            input.type = type;
+            input.value = value ?? '';
+            input.className = 'w-full min-w-[8rem] rounded border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500';
+
+            if (type === 'number') {
+                input.step = field === 'purchase_factor' ? '0.0001' : '1';
+            }
+
+            cell.appendChild(input);
+            return cell;
+        }
+
+        function formatDateTime(value) {
+            if (!value) {
+                return '';
+            }
+
+            return new Date(value).toLocaleString();
+        }
+
+        function renderCalculationLog(calculations) {
+            logTableBody.innerHTML = '';
+
+            if (!calculations.length) {
+                const row = document.createElement('tr');
+                const cell = document.createElement('td');
+                cell.colSpan = 10;
+                cell.className = 'px-3 py-6 text-center text-gray-500';
+                cell.textContent = 'No saved calculations found.';
+                row.appendChild(cell);
+                logTableBody.appendChild(row);
+                return;
+            }
+
+            calculations.forEach(calculation => {
+                const row = document.createElement('tr');
+                row.dataset.id = calculation.id;
+                row.className = 'hover:bg-gray-50';
+
+                row.appendChild(createTextCell(calculation.id));
+                row.appendChild(createEditableCell('date_of_birth', calculation.date_of_birth, 'date'));
+                row.appendChild(createEditableCell('retirement_date', calculation.retirement_date, 'date'));
+                row.appendChild(createEditableCell('age_next_birthday', calculation.age_next_birthday, 'number'));
+                row.appendChild(createEditableCell('purchase_factor', calculation.purchase_factor, 'number'));
+                row.appendChild(createEditableCell('effective_policy_date', calculation.effective_policy_date));
+                row.appendChild(createEditableCell('restoration_date', calculation.restoration_date, 'date'));
+                row.appendChild(createEditableCell('age_at_restoration', calculation.age_at_restoration));
+                row.appendChild(createTextCell(formatDateTime(calculation.created_at)));
+
+                const actionCell = document.createElement('td');
+                actionCell.className = 'px-3 py-3 align-top';
+                const saveButton = document.createElement('button');
+                saveButton.type = 'button';
+                saveButton.className = 'rounded bg-green-600 px-3 py-1 text-sm font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2';
+                saveButton.textContent = 'Save';
+                saveButton.dataset.action = 'save-log-row';
+                actionCell.appendChild(saveButton);
+                row.appendChild(actionCell);
+
+                logTableBody.appendChild(row);
+            });
+        }
+
+        async function loadCalculationLog() {
+            const statusMessage = getSupabaseStatusMessage();
+            if (statusMessage) {
+                showLogMessage(statusMessage, true);
+                return;
+            }
+
+            showLogMessage('Loading saved calculations...');
+            logTableBody.innerHTML = '';
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from(CALCULATIONS_TABLE)
+                    .select('id, date_of_birth, retirement_date, age_next_birthday, purchase_factor, effective_policy_date, restoration_date, age_at_restoration, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(100);
+
+                if (error) {
+                    throw error;
+                }
+
+                renderCalculationLog(data ?? []);
+                showLogMessage('Showing the latest 100 saved calculations.');
+            } catch (error) {
+                showLogMessage(`Unable to load saved calculations: ${error.message}`, true);
+            }
+        }
+
+        async function saveLogRow(row, saveButton) {
+            const statusMessage = getSupabaseStatusMessage();
+            if (statusMessage) {
+                showLogMessage(statusMessage, true);
+                return;
+            }
+
+            const getValue = field => row.querySelector(`[data-field="${field}"]`).value.trim();
+            const payload = {
+                date_of_birth: getValue('date_of_birth'),
+                retirement_date: getValue('retirement_date'),
+                age_next_birthday: Number.parseInt(getValue('age_next_birthday'), 10),
+                purchase_factor: Number.parseFloat(getValue('purchase_factor')),
+                effective_policy_date: getValue('effective_policy_date'),
+                restoration_date: getValue('restoration_date'),
+                age_at_restoration: getValue('age_at_restoration'),
+            };
+
+            if (!payload.date_of_birth || !payload.retirement_date || !payload.effective_policy_date
+                || !payload.restoration_date || !payload.age_at_restoration
+                || Number.isNaN(payload.age_next_birthday) || Number.isNaN(payload.purchase_factor)) {
+                showLogMessage('Please complete all editable log fields before saving.', true);
+                return;
+            }
+
+            const originalText = saveButton.textContent;
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+            showLogMessage(`Saving log #${row.dataset.id}...`);
+
+            try {
+                const { error } = await supabaseClient
+                    .from(CALCULATIONS_TABLE)
+                    .update(payload)
+                    .eq('id', row.dataset.id);
+
+                if (error) {
+                    throw error;
+                }
+
+                showLogMessage(`Log #${row.dataset.id} updated in Supabase.`);
+            } catch (error) {
+                showLogMessage(`Unable to update log #${row.dataset.id}: ${error.message}`, true);
+            } finally {
+                saveButton.disabled = false;
+                saveButton.textContent = originalText;
+            }
+        }
 
         function populateTable() {
             tableBody.innerHTML = ''; // Clear existing rows
@@ -229,7 +535,7 @@
                 messageDiv.textContent = 'Retirement Date must be after the Date of Birth.';
                 return;
             }
-            
+
             // --- ADJUSTMENT: Add 1 day to SOS for Age on Next Birthday calculation ---
             const adjustedSosDate = new Date(sosDate);
             adjustedSosDate.setDate(adjustedSosDate.getDate() + 1);
@@ -260,7 +566,7 @@
                 messageDiv.textContent = `Calculation is only available for 'Age on Next Birthday' between ${minAge} and ${maxAge}. Your calculated age is ${ageNextBirthday}.`;
                 return;
             }
-            
+
             let purchaseValue;
             let effectivePolicyDateStr;
             const date2001 = new Date('2001-12-01');
@@ -276,10 +582,10 @@
                 purchaseValue = record.val_1966;
                 effectivePolicyDateStr = '01 Jul, 1966';
             }
-            
+
             const yearsToAdd = Math.round(purchaseValue);
             // Restoration Date uses original SOS Date
-            const restorationDate = new Date(sosDate); 
+            const restorationDate = new Date(sosDate);
             restorationDate.setFullYear(restorationDate.getFullYear() + yearsToAdd);
 
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -287,6 +593,7 @@
             const monthName = months[restorationDate.getMonth()];
             const year = restorationDate.getFullYear();
             const formattedRestorationDate = `${day} ${monthName}, ${year}`;
+            const restorationDateIso = `${year}-${String(restorationDate.getMonth() + 1).padStart(2, '0')}-${day}`;
 
             // --- "Age at Restoration" Calculation ---
             let tempDob = new Date(dobValue);
@@ -319,9 +626,9 @@
 
             // --- Conditional Formatting for Restoration Date ---
             const today = new Date();
-            today.setHours(0, 0, 0, 0); 
+            today.setHours(0, 0, 0, 0);
             restorationDateResultSpan.classList.remove('text-green-600', 'text-red-600', 'font-bold', 'flashing-text');
-            
+
             if (restorationDate <= today) {
                 restorationDateResultSpan.classList.add('text-green-600', 'font-bold', 'flashing-text');
             } else {
@@ -335,9 +642,51 @@
             restorationDateResultSpan.textContent = formattedRestorationDate;
             ageAtRestorationResultSpan.textContent = formattedAgeAtRestoration;
             resultsDiv.classList.remove('hidden');
+
+            saveCalculation({
+                dateOfBirth: dobValue,
+                retirementDate: sosValue,
+                ageNextBirthday,
+                purchaseFactor: purchaseValue,
+                effectivePolicyDate: effectivePolicyDateStr,
+                restorationDate: restorationDateIso,
+                ageAtRestoration: formattedAgeAtRestoration,
+            });
         });
 
-        document.addEventListener('DOMContentLoaded', populateTable);
+        showLogBtn.addEventListener('click', () => {
+            const password = window.prompt('Enter password to show saved calculation log:');
+
+            if (password !== LOG_PASSWORD) {
+                showSaveMessage('Incorrect password for log access.', true);
+                return;
+            }
+
+            showSaveMessage('');
+            logPanel.classList.remove('hidden');
+            loadCalculationLog();
+        });
+
+        refreshLogBtn.addEventListener('click', loadCalculationLog);
+
+        hideLogBtn.addEventListener('click', () => {
+            logPanel.classList.add('hidden');
+        });
+
+        logTableBody.addEventListener('click', event => {
+            const saveButton = event.target.closest('[data-action="save-log-row"]');
+
+            if (!saveButton) {
+                return;
+            }
+
+            saveLogRow(saveButton.closest('tr'), saveButton);
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            populateTable();
+            updateVisitCounter();
+        });
     </script>
 </body>
 </html>
