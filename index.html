@@ -124,10 +124,10 @@
 
 
     <script>
-        // Configure these values with your Supabase project settings before publishing.
+        // Supabase project settings.
         // Create the required tables and policies by running supabase-schema.sql in Supabase.
-        const SUPABASE_URL = 'https://YOUR_PROJECT_REF.supabase.co';
-        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const SUPABASE_URL = 'https://loirevkvnyewefzxzpbn.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_rcCa1GNbYhx1yRmozV648g_mvz0TUr5';
         const CALCULATIONS_TABLE = 'pension_calculations';
         const VISITS_TABLE = 'app_visits';
         const VISIT_COUNTER_ID = 'pension-restoration-date';
@@ -219,7 +219,7 @@
 
         function getSupabaseStatusMessage() {
             if (!isSupabaseConfigured) {
-                return 'Supabase is not configured yet. Add your project URL and anon key in index.html.';
+                return 'Supabase is not configured yet. Add your project URL and publishable key in index.html.';
             }
 
             if (!supabaseClient) {
