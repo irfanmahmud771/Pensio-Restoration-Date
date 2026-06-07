@@ -236,7 +236,6 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_rcCa1GNbYhx1yRmozV648g_mvz0TUr5';
         const CALCULATIONS_TABLE = 'pension_calculations';
         const VISIT_COUNTER_ID = 'pension-restoration-date';
-        const LOG_PASSWORD = 'Smile@786';
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -678,15 +677,39 @@
             if (e.key === 'Enter') handlePasswordSubmit();
         });
 
-        function handlePasswordSubmit() {
+        async function handlePasswordSubmit() {
             const pwd = ui.adminPasswordInput.value;
-            if (pwd === LOG_PASSWORD) {
-                ui.passwordModal.classList.add('hidden');
-                ui.logPanel.classList.remove('hidden');
-                ui.logPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                loadCalculationLog();
-            } else {
+            if (!pwd) return;
+
+            // Change button state while verifying
+            ui.submitModalBtn.textContent = 'Verifying...';
+            ui.submitModalBtn.disabled = true;
+
+            try {
+                // Call the secure Supabase function
+                const { data: isValid, error } = await supabaseClient.rpc('verify_admin_password', { 
+                    p_password: pwd 
+                });
+
+                if (error) throw error;
+
+                if (isValid) {
+                    ui.passwordModal.classList.add('hidden');
+                    ui.logPanel.classList.remove('hidden');
+                    ui.logPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    loadCalculationLog();
+                } else {
+                    ui.modalError.textContent = 'Incorrect password.';
+                    ui.modalError.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Auth error:", error.message);
+                ui.modalError.textContent = 'Verification failed. Please try again.';
                 ui.modalError.classList.remove('hidden');
+            } finally {
+                // Restore button state
+                ui.submitModalBtn.textContent = 'Verify';
+                ui.submitModalBtn.disabled = false;
             }
         }
         
