@@ -10,157 +10,219 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
         }
         .card {
             background-color: white;
             border-radius: 1rem;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             transition: all 0.3s ease-in-out;
         }
         .btn-primary {
             background-color: #4f46e5;
             color: white;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.2s ease, transform 0.1s ease;
         }
         .btn-primary:hover {
             background-color: #4338ca;
         }
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
         .result-box {
-            background-color: #f3f4f6;
+            background-color: #eef2ff;
             border-left: 4px solid #4f46e5;
         }
-        /* For table scrollbar styling */
+        /* Custom Scrollbar for tables */
         .table-container::-webkit-scrollbar {
             width: 8px;
+            height: 8px;
         }
         .table-container::-webkit-scrollbar-track {
-            background: #f1f1f1;
+            background: #f1f5f9;
+            border-radius: 4px;
         }
         .table-container::-webkit-scrollbar-thumb {
-            background: #888;
+            background: #cbd5e1;
             border-radius: 4px;
         }
         .table-container::-webkit-scrollbar-thumb:hover {
-            background: #555;
+            background: #94a3b8;
         }
-        /* Flashing animation */
+        /* Flashing animation for restored pensions */
         @keyframes flash {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.2; }
+            50% { opacity: 0.4; }
         }
         .flashing-text {
-            animation: flash 1.5s infinite;
+            animation: flash 2s infinite;
+        }
+        
+        /* Modal Overlay */
+        #passwordModal {
+            backdrop-filter: blur(4px);
         }
     </style>
 </head>
-<body class="bg-gray-100 py-10">
-    <div class="container mx-auto px-4">
-        <div class="card w-full max-w-lg mx-auto p-6 sm:p-8">
-            <!-- Header Section -->
+<body class="text-slate-800 py-8 px-4 sm:px-6 lg:px-8">
+
+    <div class="container mx-auto max-w-7xl">
+        
+        <!-- Main Calculator Card -->
+        <div class="card w-full max-w-lg mx-auto p-6 sm:p-8 mb-10 border border-slate-100">
             <div class="text-center mb-8">
-                <h1 class="text-3xl font-bold text-gray-800">Pension Restoration Date Calculator</h1>
-                <p class="text-gray-500 mt-2">Enter your details to calculate your pension restoration date.</p>
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4">
+                    <svg class="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">Pension Restoration Date Calculator</h1>
+                <p class="text-slate-500 mt-2 text-sm sm:text-base">Enter your details to calculate your pension restoration date.</p>
             </div>
 
-            <!-- Form Section -->
-            <div class="space-y-6">
+            <div class="space-y-5">
                 <div>
-                    <label for="dob" class="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-                    <input type="date" id="dob" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    <label for="dob" class="block text-sm font-semibold text-slate-700 mb-1.5">Date of Birth</label>
+                    <input type="date" id="dob" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-slate-700">
                 </div>
                 <div>
-                    <label for="sos" class="block text-sm font-medium text-gray-700 mb-1">Date of Retirement (SOS)</label>
-                    <input type="date" id="sos" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                    <label for="sos" class="block text-sm font-semibold text-slate-700 mb-1.5">Date of Retirement (SOS)</label>
+                    <input type="date" id="sos" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-slate-700">
                 </div>
 
-                <button id="calculateBtn" class="w-full btn-primary font-bold py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                    Calculate
+                <button id="calculateBtn" class="w-full btn-primary font-bold py-3.5 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm mt-2">
+                    Calculate Restoration Date
                 </button>
             </div>
 
+            <!-- Error Message Area -->
+            <div id="message" class="mt-4 text-center text-red-500 font-medium text-sm hidden"></div>
+
             <!-- Results Section -->
-            <div id="results" class="mt-8 hidden">
-                 <div class="result-box p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-2">Calculation Results:</h3>
-                    <div class="space-y-2">
-                        <p class="text-gray-600"><strong>Age on Next Birthday:</strong> <span id="ageResult" class="font-bold text-indigo-600"></span></p>
-                        <p class="text-gray-600"><strong>Purchase Factor:</strong> <span id="valueResult" class="font-bold text-indigo-600"></span></p>
-                        <p class="text-gray-600"><strong>Effective Policy Date:</strong> <span id="policyDateResult" class="font-bold text-indigo-600"></span></p>
-                        <p class="text-gray-600"><strong>Restoration Date:</strong> <span id="restorationDateResult"></span></p>
-                        <p class="text-gray-600"><strong>Age at Restoration:</strong> <span id="ageAtRestorationResult" class="font-bold text-indigo-600"></span></p>
+            <div id="results" class="mt-8 hidden animate-fade-in-up">
+                 <div class="result-box p-5 rounded-xl shadow-inner">
+                    <h3 class="text-lg font-semibold text-slate-800 mb-4 border-b border-indigo-200 pb-2">Calculation Results</h3>
+                    <div class="space-y-3 text-sm sm:text-base">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600 font-medium">Age on Next Birthday:</span>
+                            <span id="ageResult" class="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600 font-medium">Purchase Factor:</span>
+                            <span id="valueResult" class="font-bold text-indigo-700"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600 font-medium">Effective Policy Date:</span>
+                            <span id="policyDateResult" class="font-bold text-slate-700"></span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-indigo-100">
+                            <span class="text-slate-600 font-medium">Restoration Date:</span>
+                            <span id="restorationDateResult" class="text-right"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-600 font-medium">Age at Restoration:</span>
+                            <span id="ageAtRestorationResult" class="font-bold text-slate-700 text-right"></span>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-indigo-100">
+                            <span class="text-slate-600 font-medium">Period Remaining:</span>
+                            <span id="periodRemainingResult" class="font-bold text-right"></span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="mt-6 text-center text-sm text-gray-500">
-                Total Visits: <span id="totalVisits" class="font-semibold text-indigo-600">Loading...</span>
-            </div>
-
-            <!-- Error/Message Section -->
-            <div id="message" class="mt-6 text-center text-red-500 font-medium"></div>
-            <div id="saveMessage" class="mt-2 text-center text-sm text-gray-500"></div>
-
-            <div class="mt-4 text-center">
-                <button id="showLogBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
-                    Show Log
-                </button>
+            <!-- Footer Meta -->
+            <div class="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-6">
+                <div class="flex flex-col items-start gap-2 w-full sm:w-auto">
+                    <div class="text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm w-full sm:w-auto flex justify-between gap-4">
+                        <span>Total Visits:</span> 
+                        <span id="totalVisits" class="font-bold text-indigo-600">...</span>
+                    </div>
+                    <div class="text-sm font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm w-full sm:w-auto flex justify-between gap-4">
+                        <span>Total Calculation Log:</span> 
+                        <span id="totalCalculations" class="font-bold text-indigo-600">...</span>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col items-center sm:items-end w-full sm:w-auto gap-2">
+                    <button id="showLogBtn" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors">
+                        Show Log
+                    </button>
+                    <div id="saveMessage" class="text-xs text-slate-400 h-4 w-full text-center sm:text-right"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Supabase Log Section -->
-        <div id="logPanel" class="card w-full max-w-6xl mx-auto p-6 sm:p-8 mt-10 hidden">
-            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+        <!-- Custom Password Modal -->
+        <div id="passwordModal" class="fixed inset-0 bg-slate-900/50 hidden z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 transform transition-all">
+                <h3 class="text-lg font-bold text-slate-800 mb-2">Admin Authentication</h3>
+                <p class="text-sm text-slate-500 mb-4">Please enter the password to view logs.</p>
+                <input type="password" id="adminPassword" placeholder="Enter password" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-4">
+                <div id="modalError" class="text-red-500 text-xs mb-4 hidden">Incorrect password.</div>
+                <div class="flex justify-end gap-2">
+                    <button id="cancelModalBtn" class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+                    <button id="submitModalBtn" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors shadow-sm">Verify</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Firebase Log Section (Admin Only) -->
+        <div id="logPanel" class="card w-full max-w-6xl mx-auto p-6 sm:p-8 mb-10 hidden border-t-4 border-t-indigo-500">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800">Saved Calculation Log</h2>
-                    <p class="text-sm text-gray-500 mt-1">Edit a saved calculation and click Save to update it in Supabase.</p>
+                    <h2 class="text-xl sm:text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Calculation Logs
+                    </h2>
+                    <p class="text-sm text-slate-500 mt-1">Recent calculations saved to the cloud.</p>
                 </div>
                 <div class="flex gap-2">
-                    <button id="refreshLogBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
-                        Refresh
-                    </button>
-                    <button id="hideLogBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition-colors">
-                        Hide
+                    <button id="hideLogBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-lg focus:outline-none transition-colors text-sm">
+                        Close Panel
                     </button>
                 </div>
             </div>
-            <div id="logMessage" class="mb-4 text-sm text-gray-500"></div>
-            <div class="overflow-x-auto rounded-lg border">
-                <table class="w-full min-w-[900px] text-sm text-left text-gray-500">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+            
+            <div id="logMessage" class="mb-4 text-sm text-indigo-600 bg-indigo-50 p-2 rounded hidden"></div>
+            
+            <div class="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
+                <table class="w-full min-w-[900px] text-sm text-left text-slate-600">
+                    <thead class="text-xs text-slate-700 uppercase bg-slate-50 border-b border-slate-200">
                         <tr>
-                            <th scope="col" class="px-3 py-3">ID</th>
-                            <th scope="col" class="px-3 py-3">Date of Birth</th>
-                            <th scope="col" class="px-3 py-3">Retirement Date</th>
-                            <th scope="col" class="px-3 py-3">Age Next Birthday</th>
-                            <th scope="col" class="px-3 py-3">Purchase Factor</th>
-                            <th scope="col" class="px-3 py-3">Policy Date</th>
-                            <th scope="col" class="px-3 py-3">Restoration Date</th>
-                            <th scope="col" class="px-3 py-3">Age at Restoration</th>
-                            <th scope="col" class="px-3 py-3">Created</th>
-                            <th scope="col" class="px-3 py-3">Action</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Date of Birth</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Retirement Date</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Age Next BD</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Factor</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Policy Date</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Restoration Date</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Age at Restoration</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Timestamp</th>
                         </tr>
                     </thead>
-                    <tbody id="logTableBody" class="divide-y divide-gray-200 bg-white">
-                        <!-- Saved calculation rows will be loaded here -->
+                    <tbody id="logTableBody" class="divide-y divide-slate-100 bg-white">
+                        <!-- Logs load here -->
+                        <tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">Loading records...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
         <!-- Commutation Table Section -->
-        <div class="card w-full max-w-4xl mx-auto p-6 sm:p-8 mt-10">
-            <h2 class="text-2xl font-bold text-gray-800 text-center mb-6">Commutation Table for Pension</h2>
-            <div class="table-container max-h-96 overflow-y-auto rounded-lg border">
-                <table class="w-full text-sm text-left text-gray-500">
-                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+        <div class="card w-full max-w-5xl mx-auto p-6 sm:p-8">
+            <div class="mb-6 text-center">
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-800">Commutation Table for Pension</h2>
+            </div>
+            
+            <div class="table-container max-h-[500px] overflow-y-auto rounded-lg border border-slate-200 shadow-sm relative">
+                <table class="w-full text-sm text-left text-slate-600">
+                    <thead class="text-xs text-slate-700 bg-slate-50 sticky top-0 z-10 shadow-sm">
                         <tr>
-                            <th scope="col" class="px-6 py-3">Age Next Birthday</th>
-                            <th scope="col" class="px-6 py-3">Years Purchased (w.e.f 2001-12-01)</th>
-                            <th scope="col" class="px-6 py-3">Years Purchased (w.e.f 1986-07-01)</th>
-                            <th scope="col" class="px-6 py-3">Years Purchased (w.e.f 1966-07-01)</th>
+                            <th scope="col" class="px-6 py-4 font-bold border-b border-slate-200 bg-slate-50">Age Next Birthday</th>
+                            <th scope="col" class="px-6 py-4 font-bold border-b border-slate-200 bg-slate-50">Years Purchased<br><span class="text-[10px] font-normal text-slate-500">(w.e.f 2001-12-01)</span></th>
+                            <th scope="col" class="px-6 py-4 font-bold border-b border-slate-200 bg-slate-50">Years Purchased<br><span class="text-[10px] font-normal text-slate-500">(w.e.f 1986-07-01)</span></th>
+                            <th scope="col" class="px-6 py-4 font-bold border-b border-slate-200 bg-slate-50">Years Purchased<br><span class="text-[10px] font-normal text-slate-500">(w.e.f 1966-07-01)</span></th>
                         </tr>
                     </thead>
-                    <tbody id="commutationTableBody">
+                    <tbody id="commutationTableBody" class="divide-y divide-slate-100">
                         <!-- Rows will be dynamically inserted here -->
                     </tbody>
                 </table>
@@ -168,24 +230,17 @@
         </div>
     </div>
 
-
+    <!-- Supabase SDK Implementation -->
     <script>
-        // Supabase project settings.
-        // Create the required tables and policies by running supabase-schema.sql in Supabase.
         const SUPABASE_URL = 'https://loirevkvnyewefzxzpbn.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_rcCa1GNbYhx1yRmozV648g_mvz0TUr5';
         const CALCULATIONS_TABLE = 'pension_calculations';
-        const VISITS_TABLE = 'app_visits';
         const VISIT_COUNTER_ID = 'pension-restoration-date';
         const LOG_PASSWORD = 'Smile@786';
-        const isSupabaseConfigured = SUPABASE_URL.includes('supabase.co')
-            && !SUPABASE_URL.includes('YOUR_PROJECT_REF')
-            && !SUPABASE_ANON_KEY.includes('YOUR_SUPABASE_ANON_KEY');
-        const supabaseClient = isSupabaseConfigured && window.supabase
-            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-            : null;
 
-        // Data derived from the provided CSV file, now extended
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- Data: Commutation Table ---
         const pensionData = [
             { age: 20, val_2001: 40.5043, val_1986: 50.6304, val_1966: 24.265 },
             { age: 21, val_2001: 39.7341, val_1986: 49.6676, val_1966: 24.061 },
@@ -250,281 +305,213 @@
             { age: 80, val_2001: 4.6321, val_1986: 5.7901, val_1966: 5.104 }
         ];
 
-        const dobInput = document.getElementById('dob');
-        const sosInput = document.getElementById('sos');
-        const calculateBtn = document.getElementById('calculateBtn');
-        const resultsDiv = document.getElementById('results');
-        const messageDiv = document.getElementById('message');
-        const ageResultSpan = document.getElementById('ageResult');
-        const valueResultSpan = document.getElementById('valueResult');
-        const policyDateResultSpan = document.getElementById('policyDateResult');
-        const restorationDateResultSpan = document.getElementById('restorationDateResult');
-        const ageAtRestorationResultSpan = document.getElementById('ageAtRestorationResult');
-        const tableBody = document.getElementById('commutationTableBody');
-        const totalVisitsSpan = document.getElementById('totalVisits');
-        const saveMessageDiv = document.getElementById('saveMessage');
-        const showLogBtn = document.getElementById('showLogBtn');
-        const logPanel = document.getElementById('logPanel');
-        const refreshLogBtn = document.getElementById('refreshLogBtn');
-        const hideLogBtn = document.getElementById('hideLogBtn');
-        const logMessageDiv = document.getElementById('logMessage');
-        const logTableBody = document.getElementById('logTableBody');
+        // --- DOM Elements ---
+        const ui = {
+            dobInput: document.getElementById('dob'),
+            sosInput: document.getElementById('sos'),
+            calculateBtn: document.getElementById('calculateBtn'),
+            resultsDiv: document.getElementById('results'),
+            messageDiv: document.getElementById('message'),
+            ageResultSpan: document.getElementById('ageResult'),
+            valueResultSpan: document.getElementById('valueResult'),
+            policyDateResultSpan: document.getElementById('policyDateResult'),
+            restorationDateResultSpan: document.getElementById('restorationDateResult'),
+            ageAtRestorationResultSpan: document.getElementById('ageAtRestorationResult'),
+            periodRemainingResultSpan: document.getElementById('periodRemainingResult'),
+            tableBody: document.getElementById('commutationTableBody'),
+            totalVisitsSpan: document.getElementById('totalVisits'),
+            totalCalculationsSpan: document.getElementById('totalCalculations'),
+            saveMessageDiv: document.getElementById('saveMessage'),
+            
+            // Modal Elements
+            showLogBtn: document.getElementById('showLogBtn'),
+            passwordModal: document.getElementById('passwordModal'),
+            adminPasswordInput: document.getElementById('adminPassword'),
+            modalError: document.getElementById('modalError'),
+            cancelModalBtn: document.getElementById('cancelModalBtn'),
+            submitModalBtn: document.getElementById('submitModalBtn'),
+            
+            // Log Panel Elements
+            logPanel: document.getElementById('logPanel'),
+            hideLogBtn: document.getElementById('hideLogBtn'),
+            logMessageDiv: document.getElementById('logMessage'),
+            logTableBody: document.getElementById('logTableBody')
+        };
 
-        function getSupabaseStatusMessage() {
-            if (!isSupabaseConfigured) {
-                return 'Supabase is not configured yet. Add your project URL and publishable key in index.html.';
+        // --- Supabase DB Functions ---
+        function formatNumber(num) {
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
             }
-
-            if (!supabaseClient) {
-                return 'Supabase could not be loaded. Check your internet connection and CDN access.';
-            }
-
-            return '';
+            return num.toString();
         }
 
-        function showSaveMessage(message, isError = false) {
-            saveMessageDiv.textContent = message;
-            saveMessageDiv.className = `mt-2 text-center text-sm ${isError ? 'text-red-500' : 'text-gray-500'}`;
-        }
-
-        async function updateVisitCounter() {
-            const statusMessage = getSupabaseStatusMessage();
-            if (statusMessage) {
-                totalVisitsSpan.textContent = 'Not connected';
-                showSaveMessage(statusMessage);
-                return;
-            }
-
+        async function updateStats() {
+            // 1. Update Visits
             try {
                 const { data: nextTotalVisits, error } = await supabaseClient
                     .rpc('increment_app_visit', { counter_id: VISIT_COUNTER_ID });
 
-                if (error) {
-                    throw error;
-                }
-
-                totalVisitsSpan.textContent = Number(nextTotalVisits).toLocaleString();
+                if (error) throw error;
+                ui.totalVisitsSpan.textContent = formatNumber(Number(nextTotalVisits));
             } catch (error) {
-                totalVisitsSpan.textContent = 'Unavailable';
-                showSaveMessage(`Unable to update total visits: ${error.message}`, true);
+                ui.totalVisitsSpan.textContent = 'Unavailable';
+                console.error("Failed to update visit counter:", error.message);
+            }
+
+            // 2. Fetch Total Calculation Log
+            try {
+                const { count, error } = await supabaseClient
+                    .from(CALCULATIONS_TABLE)
+                    .select('*', { count: 'exact', head: true });
+                
+                if (error) throw error;
+                ui.totalCalculationsSpan.textContent = count !== null ? formatNumber(count) : '0';
+            } catch (error) {
+                ui.totalCalculationsSpan.textContent = 'Unavailable';
+                console.error("Failed to get calculation count:", error.message);
             }
         }
 
-        async function saveCalculation(calculation) {
-            const statusMessage = getSupabaseStatusMessage();
-            if (statusMessage) {
-                showSaveMessage(statusMessage);
-                return;
-            }
-
-            showSaveMessage('Saving calculation...');
-
+        async function saveCalculationToDb(calcData) {
             try {
-                const { error } = await supabaseClient
+                ui.saveMessageDiv.textContent = 'Saving...';
+                ui.saveMessageDiv.className = 'text-xs text-slate-400 h-4';
+                
+                // 1. Delete previous records with the exact same DOB and Retirement Date
+                const { error: deleteError } = await supabaseClient
+                    .from(CALCULATIONS_TABLE)
+                    .delete()
+                    .eq('date_of_birth', calcData.dateOfBirth)
+                    .eq('retirement_date', calcData.retirementDate);
+
+                if (deleteError) throw deleteError;
+
+                // 2. Insert the new calculation record
+                const { error: insertError } = await supabaseClient
                     .from(CALCULATIONS_TABLE)
                     .insert({
-                        date_of_birth: calculation.dateOfBirth,
-                        retirement_date: calculation.retirementDate,
-                        age_next_birthday: calculation.ageNextBirthday,
-                        purchase_factor: calculation.purchaseFactor,
-                        effective_policy_date: calculation.effectivePolicyDate,
-                        restoration_date: calculation.restorationDate,
-                        age_at_restoration: calculation.ageAtRestoration,
+                        date_of_birth: calcData.dateOfBirth,
+                        retirement_date: calcData.retirementDate,
+                        age_next_birthday: calcData.ageNextBirthday,
+                        purchase_factor: calcData.purchaseFactor,
+                        effective_policy_date: calcData.effectivePolicyDate,
+                        restoration_date: calcData.restorationDate,
+                        age_at_restoration: calcData.ageAtRestoration,
                         created_at: new Date().toISOString(),
                     });
 
-                if (error) {
-                    throw error;
+                if (insertError) throw insertError;
+
+                ui.saveMessageDiv.textContent = 'Saved to cloud history.';
+                setTimeout(() => ui.saveMessageDiv.textContent = '', 3000);
+
+                // Refresh the log count after a new calculation is saved
+                const { count } = await supabaseClient
+                    .from(CALCULATIONS_TABLE)
+                    .select('*', { count: 'exact', head: true });
+                if (count !== null) ui.totalCalculationsSpan.textContent = formatNumber(count);
+
+                // Auto-refresh the log table if it is currently visible
+                if (!ui.logPanel.classList.contains('hidden')) {
+                    loadCalculationLog();
                 }
 
-                showSaveMessage('');
             } catch (error) {
-                showSaveMessage(`Unable to save calculation: ${error.message}`, true);
+                console.error("Save error:", error.message);
+                ui.saveMessageDiv.textContent = 'Failed to save to cloud.';
             }
-        }
-
-        function showLogMessage(message, isError = false) {
-            logMessageDiv.textContent = message;
-            logMessageDiv.className = `mb-4 text-sm ${isError ? 'text-red-500' : 'text-gray-500'}`;
-        }
-
-        function createTextCell(text) {
-            const cell = document.createElement('td');
-            cell.className = 'px-3 py-3 text-gray-700 align-top';
-            cell.textContent = text ?? '';
-            return cell;
-        }
-
-        function createEditableCell(field, value, type = 'text') {
-            const cell = document.createElement('td');
-            cell.className = 'px-3 py-3 align-top';
-
-            const input = document.createElement('input');
-            input.dataset.field = field;
-            input.type = type;
-            input.value = value ?? '';
-            input.className = 'w-full min-w-[8rem] rounded border border-gray-300 px-2 py-1 text-sm focus:border-indigo-500 focus:ring-indigo-500';
-
-            if (type === 'number') {
-                input.step = field === 'purchase_factor' ? '0.0001' : '1';
-            }
-
-            cell.appendChild(input);
-            return cell;
-        }
-
-        function formatDateTime(value) {
-            if (!value) {
-                return '';
-            }
-
-            return new Date(value).toLocaleString();
-        }
-
-        function renderCalculationLog(calculations) {
-            logTableBody.innerHTML = '';
-
-            if (!calculations.length) {
-                const row = document.createElement('tr');
-                const cell = document.createElement('td');
-                cell.colSpan = 10;
-                cell.className = 'px-3 py-6 text-center text-gray-500';
-                cell.textContent = 'No saved calculations found.';
-                row.appendChild(cell);
-                logTableBody.appendChild(row);
-                return;
-            }
-
-            calculations.forEach(calculation => {
-                const row = document.createElement('tr');
-                row.dataset.id = calculation.id;
-                row.className = 'hover:bg-gray-50';
-
-                row.appendChild(createTextCell(calculation.id));
-                row.appendChild(createEditableCell('date_of_birth', calculation.date_of_birth, 'date'));
-                row.appendChild(createEditableCell('retirement_date', calculation.retirement_date, 'date'));
-                row.appendChild(createEditableCell('age_next_birthday', calculation.age_next_birthday, 'number'));
-                row.appendChild(createEditableCell('purchase_factor', calculation.purchase_factor, 'number'));
-                row.appendChild(createEditableCell('effective_policy_date', calculation.effective_policy_date));
-                row.appendChild(createEditableCell('restoration_date', calculation.restoration_date, 'date'));
-                row.appendChild(createEditableCell('age_at_restoration', calculation.age_at_restoration));
-                row.appendChild(createTextCell(formatDateTime(calculation.created_at)));
-
-                const actionCell = document.createElement('td');
-                actionCell.className = 'px-3 py-3 align-top';
-                const saveButton = document.createElement('button');
-                saveButton.type = 'button';
-                saveButton.className = 'rounded bg-green-600 px-3 py-1 text-sm font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2';
-                saveButton.textContent = 'Save';
-                saveButton.dataset.action = 'save-log-row';
-                actionCell.appendChild(saveButton);
-                row.appendChild(actionCell);
-
-                logTableBody.appendChild(row);
-            });
         }
 
         async function loadCalculationLog() {
-            const statusMessage = getSupabaseStatusMessage();
-            if (statusMessage) {
-                showLogMessage(statusMessage, true);
-                return;
-            }
-
-            showLogMessage('Loading saved calculations...');
-            logTableBody.innerHTML = '';
+            ui.logMessageDiv.classList.remove('hidden');
+            showLogMessage('Fetching recent records from Supabase...');
+            ui.logTableBody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400">Loading records...</td></tr>';
 
             try {
                 const { data, error } = await supabaseClient
                     .from(CALCULATIONS_TABLE)
                     .select('id, date_of_birth, retirement_date, age_next_birthday, purchase_factor, effective_policy_date, restoration_date, age_at_restoration, created_at')
                     .order('created_at', { ascending: false })
-                    .limit(100);
+                    .limit(50);
 
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
 
                 renderCalculationLog(data ?? []);
-                showLogMessage('Showing the latest 100 saved calculations.');
+                showLogMessage(`Showing latest ${data?.length || 0} records.`);
+                setTimeout(() => ui.logMessageDiv.classList.add('hidden'), 3000);
             } catch (error) {
                 showLogMessage(`Unable to load saved calculations: ${error.message}`, true);
+                console.error("Load log error:", error);
             }
         }
 
-        async function saveLogRow(row, saveButton) {
-            const statusMessage = getSupabaseStatusMessage();
-            if (statusMessage) {
-                showLogMessage(statusMessage, true);
+        function renderCalculationLog(calculations) {
+            ui.logTableBody.innerHTML = '';
+
+            if (calculations.length === 0) {
+                ui.logTableBody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-slate-400 italic">No saved calculations found.</td></tr>';
                 return;
             }
 
-            const getValue = field => row.querySelector(`[data-field="${field}"]`).value.trim();
-            const payload = {
-                date_of_birth: getValue('date_of_birth'),
-                retirement_date: getValue('retirement_date'),
-                age_next_birthday: Number.parseInt(getValue('age_next_birthday'), 10),
-                purchase_factor: Number.parseFloat(getValue('purchase_factor')),
-                effective_policy_date: getValue('effective_policy_date'),
-                restoration_date: getValue('restoration_date'),
-                age_at_restoration: getValue('age_at_restoration'),
-            };
-
-            if (!payload.date_of_birth || !payload.retirement_date || !payload.effective_policy_date
-                || !payload.restoration_date || !payload.age_at_restoration
-                || Number.isNaN(payload.age_next_birthday) || Number.isNaN(payload.purchase_factor)) {
-                showLogMessage('Please complete all editable log fields before saving.', true);
-                return;
-            }
-
-            const originalText = saveButton.textContent;
-            saveButton.disabled = true;
-            saveButton.textContent = 'Saving...';
-            showLogMessage(`Saving log #${row.dataset.id}...`);
-
-            try {
-                const { error } = await supabaseClient
-                    .from(CALCULATIONS_TABLE)
-                    .update(payload)
-                    .eq('id', row.dataset.id);
-
-                if (error) {
-                    throw error;
-                }
-
-                showLogMessage(`Log #${row.dataset.id} updated in Supabase.`);
-            } catch (error) {
-                showLogMessage(`Unable to update log #${row.dataset.id}: ${error.message}`, true);
-            } finally {
-                saveButton.disabled = false;
-                saveButton.textContent = originalText;
-            }
-        }
-
-        function populateTable() {
-            tableBody.innerHTML = ''; // Clear existing rows
-            pensionData.forEach(item => {
+            calculations.forEach(calc => {
                 const row = document.createElement('tr');
-                row.className = 'bg-white border-b hover:bg-gray-50';
+                row.className = 'hover:bg-slate-50 transition-colors text-slate-600';
+                
+                const dateOpts = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' };
+                const timeString = calc.created_at ? new Date(calc.created_at).toLocaleString(undefined, dateOpts) : 'Unknown';
+
                 row.innerHTML = `
-                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${item.age}</td>
-                    <td class="px-6 py-4">${item.val_2001.toFixed(4)}</td>
-                    <td class="px-6 py-4">${item.val_1986.toFixed(4)}</td>
-                    <td class="px-6 py-4">${item.val_1966.toFixed(3)}</td>
+                    <td class="px-4 py-3">${calc.date_of_birth || '-'}</td>
+                    <td class="px-4 py-3">${calc.retirement_date || '-'}</td>
+                    <td class="px-4 py-3 font-medium">${calc.age_next_birthday || '-'}</td>
+                    <td class="px-4 py-3">${calc.purchase_factor ? calc.purchase_factor.toFixed(4) : '-'}</td>
+                    <td class="px-4 py-3">${calc.effective_policy_date || '-'}</td>
+                    <td class="px-4 py-3 font-semibold text-indigo-700">${calc.restoration_date || '-'}</td>
+                    <td class="px-4 py-3">${calc.age_at_restoration || '-'}</td>
+                    <td class="px-4 py-3 text-xs text-slate-400">${timeString}</td>
                 `;
-                tableBody.appendChild(row);
+                ui.logTableBody.appendChild(row);
             });
         }
 
-        calculateBtn.addEventListener('click', () => {
-            resultsDiv.classList.add('hidden');
-            messageDiv.textContent = '';
+        function showLogMessage(msg, isError = false) {
+            ui.logMessageDiv.textContent = msg;
+            ui.logMessageDiv.className = `mb-4 text-sm p-3 rounded font-medium ${isError ? 'text-red-600 bg-red-50 border border-red-100' : 'text-indigo-600 bg-indigo-50 border border-indigo-100'}`;
+            ui.logMessageDiv.classList.remove('hidden');
+        }
 
-            const dobValue = dobInput.value;
-            const sosValue = sosInput.value;
+        // --- Core Application Logic ---
+        function populateTable() {
+            ui.tableBody.innerHTML = ''; 
+            pensionData.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50 transition-colors';
+                row.innerHTML = `
+                    <td class="px-6 py-3 font-semibold text-slate-800 whitespace-nowrap">${item.age}</td>
+                    <td class="px-6 py-3">${item.val_2001.toFixed(4)}</td>
+                    <td class="px-6 py-3">${item.val_1986.toFixed(4)}</td>
+                    <td class="px-6 py-3">${item.val_1966.toFixed(3)}</td>
+                `;
+                ui.tableBody.appendChild(row);
+            });
+        }
+
+        function showError(msg) {
+            ui.messageDiv.textContent = msg;
+            ui.messageDiv.classList.remove('hidden');
+        }
+
+        ui.calculateBtn.addEventListener('click', () => {
+            ui.resultsDiv.classList.add('hidden');
+            ui.messageDiv.classList.add('hidden');
+            ui.messageDiv.textContent = '';
+
+            const dobValue = ui.dobInput.value;
+            const sosValue = ui.sosInput.value;
 
             if (!dobValue || !sosValue) {
-                messageDiv.textContent = 'Please enter both Date of Birth and Retirement Date.';
+                showError('Please enter both Date of Birth and Date of Retirement.');
                 return;
             }
 
@@ -532,26 +519,23 @@
             const sosDate = new Date(sosValue);
 
             if (sosDate <= dobDate) {
-                messageDiv.textContent = 'Retirement Date must be after the Date of Birth.';
+                showError('Retirement Date must be after the Date of Birth.');
                 return;
             }
 
-            // --- ADJUSTMENT: Add 1 day to SOS for Age on Next Birthday calculation ---
+            // Calculation Logic
             const adjustedSosDate = new Date(sosDate);
             adjustedSosDate.setDate(adjustedSosDate.getDate() + 1);
 
-            // --- Revised "Age on Next Birthday" Calculation (using adjustedSosDate) ---
             let ageYears = adjustedSosDate.getFullYear() - dobDate.getFullYear();
             const monthDiff = adjustedSosDate.getMonth() - dobDate.getMonth();
             const dayDiff = adjustedSosDate.getDate() - dobDate.getDate();
 
-            // Check if the birthday has occurred in the retirement year
             if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
                 ageYears--;
             }
 
             let ageNextBirthday;
-            // Check if retirement is exactly on the birthday
             if (monthDiff === 0 && dayDiff === 0) {
                 ageNextBirthday = ageYears;
             } else {
@@ -563,7 +547,7 @@
             if (!record) {
                 const minAge = pensionData[0].age;
                 const maxAge = pensionData[pensionData.length - 1].age;
-                messageDiv.textContent = `Calculation is only available for 'Age on Next Birthday' between ${minAge} and ${maxAge}. Your calculated age is ${ageNextBirthday}.`;
+                showError(`Calculation only available for Age on Next Birthday between ${minAge} and ${maxAge}. Yours is ${ageNextBirthday}.`);
                 return;
             }
 
@@ -584,7 +568,6 @@
             }
 
             const yearsToAdd = Math.round(purchaseValue);
-            // Restoration Date uses original SOS Date
             const restorationDate = new Date(sosDate);
             restorationDate.setFullYear(restorationDate.getFullYear() + yearsToAdd);
 
@@ -595,7 +578,7 @@
             const formattedRestorationDate = `${day} ${monthName}, ${year}`;
             const restorationDateIso = `${year}-${String(restorationDate.getMonth() + 1).padStart(2, '0')}-${day}`;
 
-            // --- "Age at Restoration" Calculation ---
+            // Age at Restoration Logic
             let tempDob = new Date(dobValue);
             let ageYearsAtRestoration = restorationDate.getFullYear() - tempDob.getFullYear();
             let ageMonthsAtRestoration = restorationDate.getMonth() - tempDob.getMonth();
@@ -611,39 +594,63 @@
                 ageMonthsAtRestoration += 12;
             }
 
-            // --- Format Age at Restoration with new rules ---
             let ageParts = [];
             ageParts.push(`${ageYearsAtRestoration} Years`);
-
-            if (ageMonthsAtRestoration > 0) {
-                ageParts.push(ageMonthsAtRestoration === 1 ? '1 Month' : `${ageMonthsAtRestoration} Months`);
-            }
-             if (ageDaysAtRestoration > 0) {
-                ageParts.push(ageDaysAtRestoration === 1 ? '1 Day' : `${ageDaysAtRestoration} Days`);
-            }
+            if (ageMonthsAtRestoration > 0) ageParts.push(ageMonthsAtRestoration === 1 ? '1 Month' : `${ageMonthsAtRestoration} Months`);
+             if (ageDaysAtRestoration > 0) ageParts.push(ageDaysAtRestoration === 1 ? '1 Day' : `${ageDaysAtRestoration} Days`);
             const formattedAgeAtRestoration = ageParts.join(' ');
 
-
-            // --- Conditional Formatting for Restoration Date ---
+            // --- Period Remaining Calculation ---
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            restorationDateResultSpan.classList.remove('text-green-600', 'text-red-600', 'font-bold', 'flashing-text');
+
+            let formattedRemainingPeriod = "";
+            ui.periodRemainingResultSpan.className = 'font-bold text-right text-slate-700';
 
             if (restorationDate <= today) {
-                restorationDateResultSpan.classList.add('text-green-600', 'font-bold', 'flashing-text');
+                formattedRemainingPeriod = "Restored";
+                ui.periodRemainingResultSpan.classList.replace('text-slate-700', 'text-emerald-600');
             } else {
-                restorationDateResultSpan.classList.add('text-red-600', 'font-bold');
+                let remainingYears = restorationDate.getFullYear() - today.getFullYear();
+                let remainingMonths = restorationDate.getMonth() - today.getMonth();
+                let remainingDays = restorationDate.getDate() - today.getDate();
+
+                if (remainingDays < 0) {
+                    remainingMonths--;
+                    const daysInPrevMonth = new Date(restorationDate.getFullYear(), restorationDate.getMonth(), 0).getDate();
+                    remainingDays += daysInPrevMonth;
+                }
+                if (remainingMonths < 0) {
+                    remainingYears--;
+                    remainingMonths += 12;
+                }
+
+                let remainingParts = [];
+                if (remainingYears > 0) remainingParts.push(remainingYears === 1 ? '1 Year' : `${remainingYears} Years`);
+                if (remainingMonths > 0) remainingParts.push(remainingMonths === 1 ? '1 Month' : `${remainingMonths} Months`);
+                if (remainingDays > 0) remainingParts.push(remainingDays === 1 ? '1 Day' : `${remainingDays} Days`);
+                
+                formattedRemainingPeriod = remainingParts.join(' ');
             }
 
-            // --- Update UI ---
-            ageResultSpan.textContent = ageNextBirthday;
-            valueResultSpan.textContent = purchaseValue.toFixed(4);
-            policyDateResultSpan.textContent = effectivePolicyDateStr;
-            restorationDateResultSpan.textContent = formattedRestorationDate;
-            ageAtRestorationResultSpan.textContent = formattedAgeAtRestoration;
-            resultsDiv.classList.remove('hidden');
+            // UI Update
+            ui.restorationDateResultSpan.className = 'text-right font-bold';
+            if (restorationDate <= today) {
+                ui.restorationDateResultSpan.classList.add('text-emerald-600', 'flashing-text');
+            } else {
+                ui.restorationDateResultSpan.classList.add('text-rose-600');
+            }
 
-            saveCalculation({
+            ui.ageResultSpan.textContent = ageNextBirthday;
+            ui.valueResultSpan.textContent = purchaseValue.toFixed(4);
+            ui.policyDateResultSpan.textContent = effectivePolicyDateStr;
+            ui.restorationDateResultSpan.textContent = formattedRestorationDate;
+            ui.ageAtRestorationResultSpan.textContent = formattedAgeAtRestoration;
+            ui.periodRemainingResultSpan.textContent = formattedRemainingPeriod;
+            
+            ui.resultsDiv.classList.remove('hidden');
+
+            saveCalculationToDb({
                 dateOfBirth: dobValue,
                 retirementDate: sosValue,
                 ageNextBirthday,
@@ -654,38 +661,44 @@
             });
         });
 
-        showLogBtn.addEventListener('click', () => {
-            const password = window.prompt('Enter password to show saved calculation log:');
+        // --- Modal & UI Event Listeners ---
+        ui.showLogBtn.addEventListener('click', () => {
+            ui.adminPasswordInput.value = '';
+            ui.modalError.classList.add('hidden');
+            ui.passwordModal.classList.remove('hidden');
+            ui.adminPasswordInput.focus();
+        });
 
-            if (password !== LOG_PASSWORD) {
-                showSaveMessage('Incorrect password for log access.', true);
-                return;
+        ui.cancelModalBtn.addEventListener('click', () => {
+            ui.passwordModal.classList.add('hidden');
+        });
+
+        ui.submitModalBtn.addEventListener('click', handlePasswordSubmit);
+        ui.adminPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handlePasswordSubmit();
+        });
+
+        function handlePasswordSubmit() {
+            const pwd = ui.adminPasswordInput.value;
+            if (pwd === LOG_PASSWORD) {
+                ui.passwordModal.classList.add('hidden');
+                ui.logPanel.classList.remove('hidden');
+                ui.logPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                loadCalculationLog();
+            } else {
+                ui.modalError.classList.remove('hidden');
             }
-
-            showSaveMessage('');
-            logPanel.classList.remove('hidden');
-            loadCalculationLog();
+        }
+        
+        ui.hideLogBtn.addEventListener('click', () => {
+            ui.logPanel.classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
-        refreshLogBtn.addEventListener('click', loadCalculationLog);
-
-        hideLogBtn.addEventListener('click', () => {
-            logPanel.classList.add('hidden');
-        });
-
-        logTableBody.addEventListener('click', event => {
-            const saveButton = event.target.closest('[data-action="save-log-row"]');
-
-            if (!saveButton) {
-                return;
-            }
-
-            saveLogRow(saveButton.closest('tr'), saveButton);
-        });
-
+        // Initialize App on Load
         document.addEventListener('DOMContentLoaded', () => {
             populateTable();
-            updateVisitCounter();
+            updateStats();
         });
     </script>
 </body>
