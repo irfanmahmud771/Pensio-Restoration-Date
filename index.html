@@ -453,20 +453,41 @@
                 return;
             }
 
+            // Helper to format dates as DD-MM-YYYY
+            const formatAsDDMMYYYY = (dateStr, includeTime = false) => {
+                if (!dateStr) return '-';
+                const d = new Date(dateStr);
+                if (isNaN(d.getTime())) return dateStr;
+                
+                const day = String(d.getDate()).padStart(2, '0');
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const year = d.getFullYear();
+                
+                if (includeTime) {
+                    const hours = String(d.getHours()).padStart(2, '0');
+                    const minutes = String(d.getMinutes()).padStart(2, '0');
+                    return `${day}-${month}-${year} ${hours}:${minutes}`;
+                }
+                return `${day}-${month}-${year}`;
+            };
+
             calculations.forEach(calc => {
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-slate-50 transition-colors text-slate-600';
                 
-                const dateOpts = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute:'2-digit' };
-                const timeString = calc.created_at ? new Date(calc.created_at).toLocaleString(undefined, dateOpts) : 'Unknown';
+                const timeString = formatAsDDMMYYYY(calc.created_at, true);
+                const dobString = formatAsDDMMYYYY(calc.date_of_birth);
+                const sosString = formatAsDDMMYYYY(calc.retirement_date);
+                const restorationString = formatAsDDMMYYYY(calc.restoration_date);
+                const policyString = formatAsDDMMYYYY(calc.effective_policy_date);
 
                 row.innerHTML = `
-                    <td class="px-4 py-3">${calc.date_of_birth || '-'}</td>
-                    <td class="px-4 py-3">${calc.retirement_date || '-'}</td>
+                    <td class="px-4 py-3">${dobString}</td>
+                    <td class="px-4 py-3">${sosString}</td>
                     <td class="px-4 py-3 font-medium">${calc.age_next_birthday || '-'}</td>
                     <td class="px-4 py-3">${calc.purchase_factor ? calc.purchase_factor.toFixed(4) : '-'}</td>
-                    <td class="px-4 py-3">${calc.effective_policy_date || '-'}</td>
-                    <td class="px-4 py-3 font-semibold text-indigo-700">${calc.restoration_date || '-'}</td>
+                    <td class="px-4 py-3">${policyString}</td>
+                    <td class="px-4 py-3 font-semibold text-indigo-700">${restorationString}</td>
                     <td class="px-4 py-3">${calc.age_at_restoration || '-'}</td>
                     <td class="px-4 py-3 text-xs text-slate-400">${timeString}</td>
                 `;
