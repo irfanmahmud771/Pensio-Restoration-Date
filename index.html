@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pension Restoration Date Calculator</title>
+    <!-- Custom "PR" Blue Square Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%232563eb'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='central' text-anchor='middle' fill='%23ffffff' font-family='Inter, Arial, sans-serif' font-weight='700' font-size='32'%3EPR%3C/text%3E%3C/svg%3E">
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Supabase JS Client -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -165,7 +170,7 @@
             </div>
         </div>
 
-        <!-- Firebase Log Section (Admin Only) -->
+        <!-- Supabase Log Section (Admin Only) -->
         <div id="logPanel" class="card w-full max-w-6xl mx-auto p-6 sm:p-8 mb-10 hidden border-t-4 border-t-indigo-500">
             <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div>
@@ -230,7 +235,7 @@
         </div>
     </div>
 
-    <!-- Supabase SDK Implementation -->
+    <!-- Supabase SDK & App Logic Implementation -->
     <script>
         const SUPABASE_URL = 'https://loirevkvnyewefzxzpbn.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_rcCa1GNbYhx1yRmozV648g_mvz0TUr5';
@@ -375,7 +380,7 @@
         async function saveCalculationToDb(calcData) {
             try {
                 ui.saveMessageDiv.textContent = 'Saving...';
-                ui.saveMessageDiv.className = 'text-xs text-slate-400 h-4';
+                ui.saveMessageDiv.className = 'text-xs text-slate-400 h-4 w-full text-center sm:text-right';
                 
                 // 1. Delete previous records with the exact same DOB and Retirement Date
                 const { error: deleteError } = await supabaseClient
@@ -590,6 +595,7 @@
             const yearsToAdd = Math.round(purchaseValue);
             const restorationDate = new Date(sosDate);
             restorationDate.setFullYear(restorationDate.getFullYear() + yearsToAdd);
+            restorationDate.setDate(restorationDate.getDate() + 1);
 
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const day = String(restorationDate.getDate()).padStart(2, '0');
